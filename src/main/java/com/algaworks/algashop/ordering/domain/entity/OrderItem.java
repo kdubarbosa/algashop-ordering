@@ -48,7 +48,7 @@ public class OrderItem {
                 productName,
                 price,
                 quantity,
-                Money.ZERO
+                price.multiply(quantity)
         );
     }
 
