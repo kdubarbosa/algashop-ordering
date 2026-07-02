@@ -86,15 +86,22 @@ class OrderTest {
 
     @Test
     public void givenDraftOrder_whenPlace_shouldChangeToPlaced() {
-        Order order = Order.draft(new CustomerId());
+        Order order = OrderTestDataBuilder.anOrder().build();
         order.place();
         Assertions.assertThat(order.isPlaced()).isTrue();
     }
 
     @Test
+    public void givenPlacedOrder_whenMarkAsPaid_shouldChangeToPaid() {
+        Order order = OrderTestDataBuilder.anOrder().status(OrderStatus.PLACED).build();
+        order.markAsPaid();
+        Assertions.assertThat(order.isPaid()).isTrue();
+        Assertions.assertThat(order.paidAt()).isNotNull();
+    }
+
+    @Test
     public void givenPlacedOrder_whenTryToPlace_shouldGenerateException() {
-        Order order = Order.draft(new CustomerId());
-        order.place();
+        Order order = OrderTestDataBuilder.anOrder().status(OrderStatus.PLACED).build();
         Assertions.assertThatExceptionOfType(OrderStatusCannotBeChangedException.class)
                 .isThrownBy(order::place);
     }
@@ -194,6 +201,27 @@ class OrderTest {
 
         Assertions.assertThatExceptionOfType(OrderInvalidShippingDeliveryDateException.class)
                 .isThrownBy(()-> order.changeShipping(shippingInfo, shippingCost, expectedDeliveryDate));
+    }
+
+    @Test
+    public void givenDraftOrder_whenChangeItem_shouldRecalculate() {
+        Order order = Order.draft(new CustomerId());
+
+        order.addItem(
+                new ProductId(),
+                new ProductName("Destkop X11"),
+                new Money("10.00"),
+                new Quantity(3)
+        );
+
+        OrderItem orderItem = order.items().iterator().next();
+
+        order.changeItemQuantity(orderItem.id(), new Quantity(5));
+
+        Assertions.assertWith(order,
+                (o) -> Assertions.assertThat(o.totalAmount()).isEqualTo(new Money("50.00")),
+                (o) -> Assertions.assertThat(o.totalItems()).isEqualTo(new Quantity(5))
+        );
     }
 
 }
